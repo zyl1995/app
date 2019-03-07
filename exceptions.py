@@ -5,3 +5,8 @@ class NotFound(Exception):
     def __init__(self, message=None):
         self.status = self.STATUS
         self.message = message or self.DEFAULT_MESSAGE
+
+
+class TempliteSyntaxError(ValueError):
+    pass
+

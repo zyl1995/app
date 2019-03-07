@@ -2,6 +2,7 @@ from request import Request
 from response import Response
 from router import DecoratorRouter
 from exceptions import NotFound
+from template_compilation import Templite
 
 routers = DecoratorRouter()
 
@@ -28,4 +29,22 @@ def app(request):
 @routers(r'/hello/(.*)/$')
 def hello_view(request, name):
     content = 'hello {0} args{1}'.format(name, request.get_args)
+    return Response(content)
+
+
+@routers(r'/test/$')
+def test_view(request, *args):
+    template = open('test.html', 'rb')
+    text = template.read().decode('utf-8')
+    content = Templite(text).render({
+        'user_name': 'test',
+        'product_lists': [
+            {
+                'name': 'p1'
+            },
+            {
+                'name': 'p2'
+            }
+        ]
+    })
     return Response(content)

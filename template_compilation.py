@@ -1,4 +1,5 @@
 import re
+from exceptions import TempliteSyntaxError
 
 
 class CodeBuilder:
@@ -63,7 +64,7 @@ class Templite:
             if len(buffered) == 1:
                 code.add_line("append_result({})".format(buffered[0]))
             elif len(buffered) > 1:
-                code.add_line("extend_line({})".format(','.join(buffered)))
+                code.add_line("extend_result([{}])".format(','.join(buffered)))
             del buffered[:]
 
         ops_stack = []
@@ -73,57 +74,85 @@ class Templite:
                 continue
             elif token.startswith('{{'):
                 expr = self._expr_code(token[2:-2].strip())
-                buffered.append("to_str{}".format(expr))
+                buffered.append("to_str({})".format(expr))
             elif token.startswith("{%"):
                 flush_output()
                 words = token[2:-2].strip().split()
                 if words[0] == 'if':
                     if len(words) != 2:
-                        # raise error here
-                        pass
+                        self._syntax_error("Dont't understand if", token)
                     ops_stack.append('if')
                     code.add_line("if {}".format(self._expr_code(words[1])))
                     code.indent()
                 elif words[0] == 'for':
                     if len(words) !=4 or words[2] != 'in':
-                        # raise error here
-                        pass
+                        self._syntax_error("Dont't understand for", token)
                     ops_stack.append('for')
                     self._variable(words[1], self.loop_vars)
                     code.add_line(
-                        "for c_{} in {}:".format(words[1], self._expr_code[words[3]])
+                        "for c_{} in {}:".format(words[1], self._expr_code(words[3]))
                     )
                     code.indent()
-                elif words[0].startwith('end'):
+                elif words[0].startswith('end'):
                     if len(words) != 1:
-                        # raise error here
-                        pass
+                        self._syntax_error("Dont't understand end", token)
                     if not ops_stack:
-                        # raise error here
-                        pass
+                        self._syntax_error("Too many ends", token)
                     end_what = words[0][3:]
                     start_what = ops_stack.pop()
                     if end_what != start_what:
-                        # raise error here
-                        pass
+                        self._syntax_error("Mismatched end tag", end_what)
                     code.dedent()
                 else:
-                    # raise error here
-                    pass
+                    self._syntax_error("Dont't understand tag", token)
             else:
                 if token:
                     buffered.append(repr(token))
         if ops_stack:
-            # raise error here
-            pass
+            self._syntax_error("Unmatched action tag", ops_stack[-1])
         flush_output()
         # 变量定义
         for var_name in self.all_vals - self.loop_vars:
-            vars_code.add_line("c_{} = {}".format(var_name, var_name))
+            vars_code.add_line("c_{} = context['{}']".format(var_name, var_name))
 
         code.add_line("return ''.join(result)")
         code.dedent()
         self._render_function = code.get_globals()['render_function']
 
     def _expr_code(self, expr):
-        pass
+        if '|' in expr:
+            pipes = expr.split('|')
+            code = self._expr_code(pipes[0])
+            for func in pipes[1:]:
+                self._variable(func, self.all_vals)
+                code = "c_{}(({})".format(func, code)
+        elif '.' in expr:
+            dots = expr.split('.')
+            code = self._expr_code(dots[0])
+            args = ','.join(repr(d) for d in dots[1:])
+            code = "do_dots({}, {})".format(code, args)
+        else:
+            self._variable(expr, self.all_vals)
+            code = "c_{}".format(expr)
+        return code
+
+    def _variable(self, name, vars_set):
+        vars_set.add(name)
+
+    def _syntax_error(self, msg, thing):
+        raise TempliteSyntaxError('{}:{}'.format(msg, thing))
+
+    def _do_dots(self, value, *dots):
+        for dot in dots:
+            try:
+                value = getattr(value, dot)
+            except AttributeError:
+                value = value[dot]
+            if callable(value):
+                value = value()
+        return value
+
+    def render(self, context):
+        _context = dict(self.context)
+        _context.update(context)
+        return self._render_function(_context, self._do_dots)

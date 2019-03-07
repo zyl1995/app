@@ -1,0 +1,7 @@
+<p>Welcome, {{user_name}}!</p>
+<p>Products:</p>
+<ul>
+{% for product in product_lists %}
+    <li>{{ product.name }}</li>
+{% endfor %}
+</ul>
