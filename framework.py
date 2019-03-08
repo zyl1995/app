@@ -2,7 +2,7 @@ from request import Request
 from response import Response
 from router import DecoratorRouter
 from exceptions import NotFound
-from template_compilation import Templite
+from utils import render
 
 routers = DecoratorRouter()
 
@@ -20,10 +20,10 @@ def handle_request_response(func):
 @handle_request_response
 def app(request):
     try:
-        _callback, args = routers.match(request.path)
+        _callback, kwargs = routers.match(request.path)
     except NotFound as e:
         return Response('Sorry, {}'.format(e.message))
-    return _callback(request, *args)
+    return _callback(request, **kwargs)
 
 
 @routers(r'/hello/(.*)/$')
@@ -32,12 +32,11 @@ def hello_view(request, name):
     return Response(content)
 
 
-@routers(r'/test/$')
-def test_view(request, *args):
-    template = open('test.html', 'rb')
-    text = template.read().decode('utf-8')
-    content = Templite(text).render({
-        'user_name': 'test',
+@routers(r'/test/(?P<slug>[\w-]+)/$')
+@render('test.html')
+def test_view(request, slug, *args, **kwargs):
+    context = {
+        'user_name': slug,
         'product_lists': [
             {
                 'name': 'p1'
@@ -46,5 +45,5 @@ def test_view(request, *args):
                 'name': 'p2'
             }
         ]
-    })
-    return Response(content)
+    }
+    return context

@@ -10,7 +10,7 @@ class DecoratorRouter:
         for (pattern, callback) in self.routing_table:
             _match = re.match(pattern, path)
             if _match:
-                return (callback, _match.groups())
+                return callback, _match.groupdict()
         raise NotFound()
 
     def __call__(self, pattern):
