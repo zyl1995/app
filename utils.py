@@ -16,6 +16,5 @@ def render(template):
                 raise
             context = func(request, **kwargs)
             return Response(Templite(text).render(context))
-
         return inner_wrapper
     return wrapper
