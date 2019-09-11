@@ -1,18 +1,17 @@
-import tornado.ioloop
-import tornado.web
+import MySQLdb
 
 
-class MainHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.write("Hello, world")
+conn = MySQLdb.connect(
+    host='localhost',
+    port=3306,
+    user='vidsai009',
+    passwd='123456',
+    db='demo'
+)
+
+cur = conn.cursor()
 
 
-def make_app():
-    return tornado.web.Application([
-        (r"/", MainHandler),
-    ])
-
-if __name__ == "__main__":
-    app = make_app()
-    app.listen(8999)
-    tornado.ioloop.IOLoop.current().start()
+def check_login(username, pwd):
+    # 如果登录成功，返回用户数据id
+    pass

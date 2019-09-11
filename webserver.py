@@ -31,7 +31,7 @@ class WSGIService:
         ERROR='wsgi.error',
         MULTITHREAD='wsgi.multiprocess',
         MULTIPROCESS='wsgi.multiprocess',
-        RUN_ONCE='wsgi.run_once'
+        RUN_ONCE='wsgi.run_once',
     )
     # CGI 环境变量
     CGI_ENV = dict(
@@ -61,6 +61,8 @@ class WSGIService:
         self.server_name = socket.getfqdn(host)
         # 返回通过框架设置的http报文头部信息
         self.header_set = []
+        # cookie
+        self.cookies = {}
 
     def handle_pid(*args, **kwargs):
         while True:
@@ -92,9 +94,20 @@ class WSGIService:
         self.request_lines = self.request_data.splitlines()
         print(self.format_like_curl('< {line}\n', self.request_lines))
         self.parse_request()
+        self.parse_cookies()
         env = self.get_environ()
         result = self.application(env, self.start_response)
         self.finish_response(result)
+
+    def parse_cookies(self):
+        for line in self.request_lines:
+            if 'Cookie' not in line:
+                continue
+            cookies = line.split(':')[1].strip()
+            data = cookies.split(';')
+            for item in data:
+                k, v = item.split('=')
+                self.cookies[k] = v
 
     def finish_response(self, result):
         try:
@@ -130,6 +143,8 @@ class WSGIService:
         env[self.CGI_ENV['PATH_INFO']] = self.path
         env[self.CGI_ENV['SERVER_NAME']] = self.server_name
         env[self.CGI_ENV['SERVER_PORT']] = str(self.server_port)
+        # 处理cookies
+        env['COOKIES'] = self.cookies
         return env
 
     def start_response(self, status, response_headers, exc_info=False):
