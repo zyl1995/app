@@ -154,5 +154,6 @@ class Templite:
 
     def render(self, context):
         _context = dict(self.context)
-        _context.update(context)
+        if context:
+            _context.update(context)
         return self._render_function(_context, self._do_dots)
