@@ -93,14 +93,25 @@ class WSGIService:
         self.request_data = bytes.decode(self._connection.recv(self.read_limit))
         self.request_lines = self.request_data.splitlines()
         print(self.format_like_curl('< {line}\n', self.request_lines))
-        self.parse_request()
-        self.parse_cookies()
+        self.parse_request_lines()
         env = self.get_environ()
         result = self.application(env, self.start_response)
         self.finish_response(result)
 
-    def parse_cookies(self):
+    def parse_request_lines(self):
+        first_request_line = self.request_lines[0]
+        self.post_args = ''
+        self.content_type = ''
+        first_request_line = first_request_line.rstrip('\r\n')
+        (
+            self.request_method,
+            self.path,
+            self.request_version
+        ) = first_request_line.split()
+
         for line in self.request_lines:
+            if 'Content-Type' in line:
+                self.content_type =  line.split(':')[1].strip()
             if 'Cookie' not in line:
                 continue
             cookies = line.split(':')[1].strip()
@@ -108,6 +119,8 @@ class WSGIService:
             for item in data:
                 k, v = item.split('=')
                 self.cookies[k] = v
+        if self.content_type == 'application/x-www-form-urlencoded':
+            self.post_args = self.request_lines[-1]
 
     def finish_response(self, result):
         try:
@@ -144,6 +157,8 @@ class WSGIService:
         env[self.CGI_ENV['SERVER_NAME']] = self.server_name
         env[self.CGI_ENV['SERVER_PORT']] = str(self.server_port)
         # 处理cookies
+        env['Content-Type'] = self.content_type
+        env['POST-ARGS'] = self.post_args
         env['COOKIES'] = self.cookies
         return env
 
@@ -153,15 +168,6 @@ class WSGIService:
             ('Server', '{0} {1}'.format(self.__class__.__name__, self.server_version))
         ]
         self.header_set = [status, response_headers + server_headers]
-
-    def parse_request(self):
-        first_request_line = self.request_lines[0]
-        first_request_line = first_request_line.rstrip('\r\n')
-        (
-            self.request_method,
-            self.path,
-            self.request_version
-        ) = first_request_line.split()
 
 
 SERVER_ADDRESS = (HOST, PORT) = '', 8888
@@ -175,7 +181,7 @@ def make_server(server_address, application):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        sys.exit('Provide a WSGI application as module: callbale')
+        sys.exit('Provide a WSGI application as module: callable')
     app_path = sys.argv[1]
     _module, application = app_path.split(':')
     _module = __import__(_module)

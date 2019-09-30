@@ -15,3 +15,8 @@ class Request:
     def get_args(self):
         args = urllib.parse.parse_qs(self.query)
         return {k: v[0] for k, v in args.items()}
+
+    @property
+    def post_args(self):
+        args = urllib.parse.parse_qs(self.environ['POST-ARGS'])
+        return {k: v[0] for k, v in args.items()}

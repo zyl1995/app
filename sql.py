@@ -27,6 +27,8 @@ def _get_user(user_name):
         """select * from auth_user where user_name = '{}'""".format(user_name)
     )
     values = cur.fetchall()
+    if len(values) is 0:
+        return None
     return values[0]
 
 
@@ -39,6 +41,7 @@ def create_salt(length=5):
         # 每次从chars中随机取一位
         salt += chars[random.randint(0, len_chars)]
     return salt
+
 
 def create_user(user_name, pwd):
     salt = create_salt()
@@ -55,6 +58,8 @@ def check_pwd(pwd, user_pwd, user_salt):
 
 def check_login(request, user_name, pwd):
     result = _get_user(user_name=user_name)
+    if result is None:
+        return False
     id, user_pwd, user_salt = result['id'], result['pwd'], result['salt']
     verified = check_pwd(pwd, user_pwd, user_salt)
     if verified:

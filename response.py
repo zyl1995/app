@@ -5,7 +5,7 @@ class Response:
     def __init__(self, content=None, status=200, charset='utf-8', content_type='text/html'):
         self.content = content or []
         content_type = '{content_type}; charset={charset}'.format(content_type=content_type, charset=charset)
-        self.header = [('content_type', content_type)]
+        self.header = [('Content_type', content_type)]
         self._status = status
 
     @property
@@ -18,3 +18,12 @@ class Response:
         tlp = '{0}={1}'
         cookie_val = [tlp.format(key, value), tlp.format('path', path)]
         self.header.append(('Set-Cookie', ';'.join(cookie_val)))
+
+
+class RedirectResponse(Response):
+
+    def __init__(self, redirect_url='/', *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._status = 302
+        self.header.append(('Location', redirect_url))
+

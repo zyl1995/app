@@ -5,7 +5,7 @@ import time
 pool = redis.ConnectionPool(host='localhost', port=6379)
 redis_connection = redis.Redis(connection_pool=pool)
 
-SESSION_EXPIRE = 60
+SESSION_EXPIRE = 600
 
 
 class RedisSession:
