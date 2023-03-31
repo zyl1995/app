@@ -1,2 +1,2 @@
 mysqlclient==1.4.2.post1
-redis==3.3.8
+redis==4.4.4
